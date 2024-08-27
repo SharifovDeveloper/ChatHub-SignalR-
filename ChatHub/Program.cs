@@ -8,6 +8,7 @@ namespace ChatHub
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddSignalR();
 
             var app = builder.Build();
 
@@ -25,6 +26,11 @@ namespace ChatHub
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapHub<ChatHub>("/chat");
+            });
 
             app.MapControllerRoute(
                 name: "default",
