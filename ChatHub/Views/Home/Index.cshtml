@@ -1,8 +1,139 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Chat Room";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="chat-header py-3 border-bottom bg-light">
+                <h4 class="mb-0">Chat Room</h4>
+            </div>
+            <div id="chatWindow" class="chat-window border rounded p-3 bg-light" style="height: 500px; overflow-y: auto;">
+                <ul id="messagesList" class="list-unstyled m-0"></ul>
+            </div>
+            <div class="input-group mt-3">
+                <input type="text" id="userNameInput" class="form-control" placeholder="Your name" aria-label="Your name">
+                <input type="text" id="userPicInput" class="form-control mb-2" placeholder="Profile picture URL">
+                <textarea id="messageInput" class="form-control" placeholder="Type your message..." rows="2"></textarea>
+                <button id="sendButton" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.11/signalr.min.js"></script>
+    <script type="text/javascript">
+        const connection = new signalR.HubConnectionBuilder().withUrl("/chathub").build();
+
+        connection.on("ReceiveMessage", (userName, userProfilePic, message) => {
+            const msg = `
+                        <div class="chat-message">
+                            <div class="message-profile">
+                                <img src="${userProfilePic || 'default-profile-pic.png'}" class="profile-pic" alt="${userName}">
+                            </div>
+                            <div class="message-content">
+                                <div class="message-bubble ${userName === 'You' ? 'sent' : 'received'}">
+                                    <div class="message-text">${message}</div>
+                                    <div class="message-timestamp">${new Date().toLocaleTimeString()}</div>
+                                </div>
+                                <div class="message-author">${userName}</div>
+                            </div>
+                        </div>
+                    `;
+            const li = document.createElement("li");
+            li.innerHTML = msg;
+            document.getElementById("messagesList").appendChild(li);
+            document.getElementById("chatWindow").scrollTop = document.getElementById("chatWindow").scrollHeight;
+        });
+
+        connection.start().catch(err => console.error(err.toString()));
+
+        document.getElementById("sendButton").addEventListener("click", event => {
+            const userName = document.getElementById("userNameInput").value.trim();
+            const userProfilePic = document.getElementById("userPicInput").value.trim();
+            const message = document.getElementById("messageInput").value.trim();
+            if (userName && message) {
+                connection.invoke("SendMessage", userName, userProfilePic, message).catch(err => console.error(err.toString()));
+                document.getElementById("messageInput").value = "";
+                document.getElementById("messageInput").focus();
+            }
+            event.preventDefault();
+        });
+
+        document.getElementById("messageInput").addEventListener("keypress", event => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                document.getElementById("sendButton").click();
+            }
+        });
+    </script>
+}
+
+<style>
+    .chat-header {
+        border-bottom: 1px solid #ddd;
+    }
+
+    .chat-window {
+        background-color: #f7f7f7;
+        padding: 10px;
+    }
+
+    .chat-message {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .message-profile {
+        margin-right: 10px;
+    }
+
+    .profile-pic {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .message-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px;
+        border-radius: 10px;
+        position: relative;
+    }
+
+        .message-bubble.sent {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .message-bubble.received {
+            background-color: #e9ecef;
+            align-self: flex-start;
+        }
+
+    .message-text {
+        margin-bottom: 5px;
+    }
+
+    .message-timestamp {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-align: right;
+    }
+
+    .message-author {
+        font-size: 0.85rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 5px;
+    }
+</style>
